@@ -7,7 +7,7 @@
 
 MPI_Status status;
 double** local_datapoints;  // The datapoints to cluster
-unsigned char* local_membership;      // Which cluster each datapoint belongs to
+int* local_membership;      // Which cluster each datapoint belongs to
 double** local_newCentroids; // Sum of the dimensions of datapoints belonging to each cluster
 int* local_newCentroidsSize;  // Number of datapoints belonging to each cluster
 double** global_centroids;    // Means of each cluster
@@ -167,36 +167,69 @@ void kMeans() {
         //printf("Datapoints that changed clusters: %d\n", numChanged);
     }
 }
+int mpi_write(char *filename)
+{
+    int        divd, rem, len, err;
+    int        i, j, k;
+    char       outFileName[1024], fs_type[32], str[32], *delim;
+    MPI_File   fh;
+    MPI_Status status;
+
+
+    sprintf(outFileName, "%s.txt", filename);
+    err = MPI_File_open(MPI_COMM_WORLD, outFileName, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    if (err != MPI_SUCCESS) {
+        char errstr[MPI_MAX_ERROR_STRING];
+        int  errlen;
+        MPI_Error_string(err, errstr, &errlen);
+        printf("Error at opening file %s (%s)\n", outFileName,errstr);
+        MPI_Finalize();
+        exit(1);
+    }
+
+    
+    divd = global_datapoint_count / processCount;
+    rem  = global_datapoint_count % processCount;
+    len  = (rank < rem) ? rank*(divd+1) : rank*divd + rem;
+
+    MPI_Offset disp = (len ) * sizeof(int);
+    MPI_File_seek(fh, disp, MPI_SEEK_SET);
+    MPI_File_write(fh, local_membership, local_datapoint_count, MPI_INT, &status);
+    
+    MPI_File_close(&fh);
+    
+    return 1;
+}
+
 
 void printMemberships(){
-    int nothing = 0;
+    int imDone = 0;
+    int prevProcessDone = 0;
     if(rank == 0){
-        
         for(int i = 0; i < local_datapoint_count; i++){
             //printf("Rank %d -> %d\n",rank, local_membership[i]);
             printf("%d",rank);
         }
         
         //printf("(%d)\n",rank);
-        MPI_Send(&nothing, 1, MPI_INT, rank+1, tag, MPI_COMM_WORLD);
+        MPI_Send(&imDone, 1, MPI_INT, rank+1, tag, MPI_COMM_WORLD);
     }else{
         
-        MPI_Recv(&nothing, 1, MPI_INT, rank-1, tag, MPI_COMM_WORLD, &status);
+        MPI_Recv(&prevProcessDone, 1, MPI_INT, rank-1, tag, MPI_COMM_WORLD, &status);
         //printf("(%d)\n",rank);
-        
         for(int i = 0; i < local_datapoint_count; i++){
             //printf("Rank %d -> %d\n",rank, local_membership[i]);
             printf("%d",rank);
         }
-        if(rank < processCount-1){
-            MPI_Send(&nothing, 1, MPI_INT, rank+1, tag, MPI_COMM_WORLD);
+        if(rank != processCount-1){
+            MPI_Send(&prevProcessDone, 1, MPI_INT, rank+1, tag, MPI_COMM_WORLD);
         }
         
     }
 }
 
 void initVars() {
-    local_membership = (unsigned char *) calloc(local_datapoint_count, sizeof(unsigned char));
+    local_membership = (int *) calloc(local_datapoint_count, sizeof(int));
     global_centroids    = allocMatrix(K, numDims, 1);
     local_newCentroids = allocMatrix(K, numDims, 1);
     local_newCentroidsSize = (int *) calloc(K, sizeof(int));
@@ -218,6 +251,7 @@ void initVars() {
 
 
 
+
 int main(int argc, char *argv[])
 {
     int rc;
@@ -230,9 +264,23 @@ int main(int argc, char *argv[])
     mpi_read("data.bin");
     initVars();
     kMeans();
-    printMemberships();
+    //printMemberships();
+    mpi_write("testing");
+    /*
+    double** local_datapoints;  // The datapoints to cluster
+    unsigned char* local_membership;      // Which cluster each datapoint belongs to
+    double** local_newCentroids; // Sum of the dimensions of datapoints belonging to each cluster
+    int* local_newCentroidsSize;  // Number of datapoints belonging to each cluster
+    double** global_centroids;    // Means of each cluster
+    int* global_centroidsSize;
+    */
 
-
+    free(local_datapoints);
+    free(local_membership);
+    free(local_newCentroidsSize);
+    free(local_newCentroids);
+    free(global_centroids);
+    free(global_centroidsSize);
 
     MPI_Finalize();
     //printf("Total sum is %d \n", totalSum);
