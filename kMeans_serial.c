@@ -1,12 +1,14 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+#include <time.h>
+#include <sys/time.h>
 
 double** datapoints;  // The datapoints to cluster
-unsigned char* membership;      // Which cluster each datapoint belongs to
+int* membership;      // Which cluster each datapoint belongs to
 double** centroids;    // Means of each cluster
 double** newCentroids; // Sum of the dimensions of datapoints belonging to each cluster
 int* newCentroidsSize;  // Number of datapoints belonging to each cluster
@@ -14,7 +16,7 @@ int* newCentroidsSize;  // Number of datapoints belonging to each cluster
 int numDatapoints = 0;
 int numDims = 0;
 int K = 2;
-
+float threshold;
 
 void printCentroids() {
     for(int i = 0; i < K; i++) {
@@ -88,7 +90,8 @@ void readFile(){
 }
 
 void initVars() {
-    membership  = (unsigned char *) malloc(numDatapoints * sizeof(unsigned char));
+    //membership  = (unsigned char *) malloc(numDatapoints * sizeof(unsigned char));
+    membership = (int *) calloc(numDatapoints, sizeof(int));
     centroids    = allocMatrix(K, numDims, 0);
     newCentroids = allocMatrix(K, numDims, 1);
     newCentroidsSize = (int *) calloc(numDatapoints, sizeof(int));
@@ -123,20 +126,26 @@ void calcNewCentroids() {
         }
         newCentroidsSize[k] = 0;
     }
+    /*
+    for(int i = 0; i < K; i++){
+        printf("Rank %d has global_centroids(%d) [%.8lf, %.8lf, %.8lf]\n",0,i, centroids[i][0], centroids[i][1], centroids[i][2]);
+    }
+    */
 }
 
 void kMeans() {
-    int numChanged = 0; // Tracks how many datapoints changed clusters each iteration
+    float numChanged = 0; // Tracks how many datapoints changed clusters each iteration
     double minDistance;
     double distance = 0;
     int curCluster;
-
-    for(int i = 0; i < 10; i++) { // nubmer of iterations
-        numChanged = 0; // Tracks how many datapoints changed clusters each iteration
+    int itercount = 0;
+    do {
+        numChanged = 0.0;
         for(int pointIndex = 0; pointIndex < numDatapoints; pointIndex++) { // iterate through datapoints
             minDistance = LONG_MAX;
             for(int k = 0; k < K; k++) { // iterate throught cluster centroids
                 distance = calcDistance(pointIndex, k);
+
                 if(distance < minDistance) {
                     minDistance = distance;
                     curCluster = k;
@@ -153,8 +162,8 @@ void kMeans() {
         // calculate new cluster centers
         calcNewCentroids();
         //printCentroids();
-        printf("Datapoints that changed clusters: %d\n", numChanged);
-    }
+        //printf("Datapoints that changed clusters: %f\n", numChanged/numDatapoints);
+    } while((numChanged/numDatapoints > threshold) && itercount++ < 500);
 }
 
 
@@ -173,9 +182,25 @@ void printDatapoints() {
 }
 
 void printDatapointClusters() {
+    FILE *write_ptr;
+    remove("memberships_serial.bin");
+    write_ptr = fopen("memberships_serial.bin","wb");  // w for write, b for binary
+
+    fwrite(membership,sizeof(int)*numDatapoints,1,write_ptr); // write 10 bytes to our buffer
+    /*
     for(int i = 0; i < numDatapoints; i++) {
-        printf("%d\n", membership[i]);
+        printf("%d,", membership[i]);
     }
+    */
+}
+
+double get_wall_time(){
+    struct timeval time;
+    if (gettimeofday(&time,NULL)){
+        //  Handle error
+        return 0;
+    }
+    return (double)time.tv_sec + (double)time.tv_usec * .000001;
 }
 
 
@@ -183,11 +208,18 @@ int main(int argc, char **argv)
 {
     readFile();
     initVars();
-    printf("Centroids at start:\n");
-    printCentroids();
-    printf("Starting k-Means\n");
+    threshold = 0.001;
+    //printf("Centroids at start:\n");
+    //printCentroids();
+    //printf("Starting k-Means\n");
     //printDatapoints();
+    //time_t start = time(NULL);
+    double startTime = get_wall_time();
     kMeans();
-    printDatapointClusters();
+    double endTime = get_wall_time();
+    printf("%.2f\n", endTime-startTime);
+    
+    //printDatapointClusters();
     return 0;
+    
 }

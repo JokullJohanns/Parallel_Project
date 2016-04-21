@@ -17,6 +17,7 @@ int global_datapoint_count, processCount,Ip,rank;
 int local_datapoint_count;
 int numDims;
 int K, tag;
+float threshold;
 
 double** allocMatrix(int rows, int cols, int useCalloc)
 {
@@ -133,13 +134,16 @@ void calcNewCentroids() {
 }
 
 void kMeans() {
-    int numChanged = 0; // Tracks how many datapoints changed clusters each iteration
+    float delta = 0; // Tracks how many datapoints changed clusters each iteration
+    float totalNumChanged = 0;
     double minDistance;
     double distance = 0;
     unsigned char curCluster;
-
-    for(int i = 0; i < 10; i++) { // nubmer of iterations
-        numChanged = 0; // Tracks how many datapoints changed clusters each iteration
+    int itercount = 0;
+    //for(int i = 0; i < 1; i++) { // nubmer of iterations
+    do {
+        delta = 0.0; // Tracks how many datapoints changed clusters each iteration
+        totalNumChanged = 0;
         for(int pointIndex = 0; pointIndex < local_datapoint_count; pointIndex++) { // iterate through datapoints
             minDistance = LONG_MAX;
 
@@ -154,7 +158,7 @@ void kMeans() {
             }
             
             if(local_membership[pointIndex] != curCluster) {
-                numChanged += 1;
+                delta += 1.0;
                 local_membership[pointIndex] = curCluster;
             }
             sumDatapointAndNewCentroid(pointIndex, curCluster);
@@ -164,8 +168,11 @@ void kMeans() {
         // calculate new cluster centers
         calcNewCentroids();
         //printCentroids();
-        //printf("Datapoints that changed clusters: %d\n", numChanged);
-    }
+        MPI_Allreduce(&delta, &totalNumChanged, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+        delta = totalNumChanged / global_datapoint_count;
+
+        //printf("Datapoints that changed clusters: %f\n", delta);
+    } while((delta > threshold) && itercount++ < 500);
 }
 int mpi_write(char *filename)
 {
@@ -175,14 +182,13 @@ int mpi_write(char *filename)
     MPI_File   fh;
     MPI_Status status;
 
-
-    sprintf(outFileName, "%s.txt", filename);
-    err = MPI_File_open(MPI_COMM_WORLD, outFileName, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    remove(filename);
+    err = MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
     if (err != MPI_SUCCESS) {
         char errstr[MPI_MAX_ERROR_STRING];
         int  errlen;
         MPI_Error_string(err, errstr, &errlen);
-        printf("Error at opening file %s (%s)\n", outFileName,errstr);
+        printf("Error at opening file %s (%s)\n", filename,errstr);
         MPI_Finalize();
         exit(1);
     }
@@ -224,7 +230,6 @@ void printMemberships(){
         if(rank != processCount-1){
             MPI_Send(&prevProcessDone, 1, MPI_INT, rank+1, tag, MPI_COMM_WORLD);
         }
-        
     }
 }
 
@@ -259,13 +264,25 @@ int main(int argc, char *argv[])
     rc = MPI_Comm_size(MPI_COMM_WORLD, &processCount);
     rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     K = 2;
-    
+    threshold = 0.001;
 
     mpi_read("data.bin");
     initVars();
+    MPI_Barrier(MPI_COMM_WORLD);
+    double startTime = MPI_Wtime();
     kMeans();
+    double endTime = MPI_Wtime();
+    double global_startTime;
+    double global_endTime;
+
+    MPI_Reduce(&startTime, &global_startTime, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&endTime, &global_endTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    
+    if(rank == 0){
+        printf("Parallel processes took %f\n", global_endTime-global_startTime);
+    }
     //printMemberships();
-    mpi_write("testing");
+    mpi_write("memberships_parallel.bin");
     /*
     double** local_datapoints;  // The datapoints to cluster
     unsigned char* local_membership;      // Which cluster each datapoint belongs to
