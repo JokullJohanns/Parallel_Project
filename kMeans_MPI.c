@@ -98,7 +98,8 @@ void mpi_read(char* filename)
     /*
     printf("numObjs %d\n", global_datapoint_count);
     printf("numCoords %d\n", numDims);
-    for(int i = 0; i < local_datapoint_count; i++){
+    int i = 0;
+    for(i = 0; i < local_datapoint_count; i++){
         printf("Rank %d has [%.8lf, %.8lf, %.8lf]\n",rank, local_datapoints[i][0], local_datapoints[i][1], local_datapoints[i][2]);
     }
     */
@@ -106,14 +107,16 @@ void mpi_read(char* filename)
 
 double calcDistance(int pointIndex, int centroidIndex) {
     double sum = 0.0;
-    for(int i = 0; i < numDims; i++) {
+    int i = 0;
+    for(i = 0; i < numDims; i++) {
         sum = sum + pow(local_datapoints[pointIndex][i] - global_centroids[centroidIndex][i], 2);
     }
     return sqrt(sum);
 }
 
 void sumDatapointAndNewCentroid(pointIndex, centroidIndex) {
-    for(int i = 0; i < numDims; i++) {
+    int i = 0;
+    for(i = 0; i < numDims; i++) {
         local_newCentroids[centroidIndex][i] += local_datapoints[pointIndex][i];
     }
 }
@@ -124,8 +127,10 @@ void calcNewCentroids() {
     MPI_Allreduce(local_newCentroidsSize, global_centroidsSize, K, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     //printf("Rank %d has centroidsSize [%d, %d]\n",rank, global_centroidsSize[0], global_centroidsSize[1]);
 
-    for(int k = 0; k < K; k++) {
-        for(int d = 0; d < numDims; d++) {
+    int k = 0;
+    for(k = 0; k < K; k++) {
+        int d = 0;
+        for(d = 0; d < numDims; d++) {
             global_centroids[k][d] = global_centroids[k][d] / global_centroidsSize[k];
             local_newCentroids[k][d] = 0.0;
         }
@@ -140,14 +145,15 @@ void kMeans() {
     double distance = 0;
     unsigned char curCluster;
     int itercount = 0;
-    //for(int i = 0; i < 1; i++) { // nubmer of iterations
     do {
         delta = 0.0; // Tracks how many datapoints changed clusters each iteration
         totalNumChanged = 0;
-        for(int pointIndex = 0; pointIndex < local_datapoint_count; pointIndex++) { // iterate through datapoints
+        int pointIndex = 0;
+        for(pointIndex = 0; pointIndex < local_datapoint_count; pointIndex++) { // iterate through datapoints
             minDistance = LONG_MAX;
 
-            for(int k = 0; k < K; k++) { // iterate throught cluster centroids
+            int k = 0;
+            for(k = 0; k < K; k++) { // iterate throught cluster centroids
                 distance = calcDistance(pointIndex, k);
 
                 if(distance < minDistance) {
@@ -212,7 +218,8 @@ void printMemberships(){
     int imDone = 0;
     int prevProcessDone = 0;
     if(rank == 0){
-        for(int i = 0; i < local_datapoint_count; i++){
+        int i = 0;
+        for(i = 0; i < local_datapoint_count; i++){
             //printf("Rank %d -> %d\n",rank, local_membership[i]);
             printf("%d",rank);
         }
@@ -223,7 +230,8 @@ void printMemberships(){
         
         MPI_Recv(&prevProcessDone, 1, MPI_INT, rank-1, tag, MPI_COMM_WORLD, &status);
         //printf("(%d)\n",rank);
-        for(int i = 0; i < local_datapoint_count; i++){
+        int i = 0;
+        for(i = 0; i < local_datapoint_count; i++){
             //printf("Rank %d -> %d\n",rank, local_membership[i]);
             printf("%d",rank);
         }
@@ -240,15 +248,18 @@ void initVars() {
     local_newCentroidsSize = (int *) calloc(K, sizeof(int));
     global_centroidsSize = (int *) calloc(K, sizeof(int));
     if(rank == 0){
-        for(int k = 0; k < K; k++) {
-            for(int i = 0; i < numDims; i++) {
+        int k = 0;
+        for(k = 0; k < K; k++) {
+            int i = 0;
+            for(i = 0; i < numDims; i++) {
                 global_centroids[k][i] = local_datapoints[k][i];
             }
         }
     }
     MPI_Bcast(global_centroids[0], K*numDims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     /*
-    for(int i = 0; i < K; i++){
+    int i = 0;
+    for(i = 0; i < K; i++){
         printf("Rank %d has centroids(%d) [%.8lf, %.8lf, %.8lf]\n",rank,i, global_centroids[i][0], global_centroids[i][1], global_centroids[i][2]);
     }
     */
