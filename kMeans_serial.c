@@ -61,8 +61,8 @@ char* getfield(char* line, int num){
     return NULL;
 }
 
-void readFile(){
-    FILE* stream = fopen("data.csv", "r");
+void readFile(char* filename){
+    FILE* stream = fopen(filename, "r");
 
     // First extract the number of datapoints and their dimension
     char firstLine[1024];
@@ -87,6 +87,17 @@ void readFile(){
         }
         row++;
     }
+}
+
+void readBinary(char* filename){
+    FILE *ptr;
+
+    ptr = fopen(filename,"rb");  // r for read, b for binary
+
+    fread(&numDatapoints, sizeof(int),1,ptr); // read 10 bytes to our buffer
+    fread(&numDims, sizeof(int),1,ptr);
+    datapoints = allocMatrix(numDatapoints, numDims, 0);
+    fread(datapoints[0], sizeof(float)*numDatapoints*numDims,1,ptr);
 }
 
 void initVars() {
@@ -206,7 +217,9 @@ double get_wall_time(){
 
 int main(int argc, char **argv)
 {
-    readFile();
+    readBinary("uniform_data_16_1000.bin");
+    //readFile("uniform_data_16_1000.csv");
+    
     initVars();
     threshold = 0.001;
     //printf("Centroids at start:\n");
@@ -219,7 +232,8 @@ int main(int argc, char **argv)
     double endTime = get_wall_time();
     printf("%.2f\n", endTime-startTime);
     
-    //printDatapointClusters();
+    printDatapointClusters();
+    
     return 0;
     
 }

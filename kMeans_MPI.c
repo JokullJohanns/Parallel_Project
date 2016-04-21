@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
     K = 2;
     threshold = 0.001;
 
-    mpi_read("data.bin");
+    mpi_read("uniform_data_16_1000.bin");
     initVars();
     MPI_Barrier(MPI_COMM_WORLD);
     double startTime = MPI_Wtime();

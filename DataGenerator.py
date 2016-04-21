@@ -13,7 +13,8 @@ def plotClusters(data):
 
 
 def generateRandomCluster(dimensions, shift, sample_size):
-	variance = np.random.random_sample(dimensions)
+	#variance = np.random.random_sample(dimensions)
+	variance = shift * np.random.random_sample(3)
 	covarianceMatrix = np.eye(dimensions)*variance
 	mean = np.random.rand(dimensions)
 	cluster = np.random.multivariate_normal(mean, covarianceMatrix, sample_size) + np.random.randint(low=0,high=shift, size=dimensions)
@@ -35,7 +36,7 @@ def generateClusters(cluster_count, dimensions, total_datapoints):
 def createDataFile_csv(data):
 	#data_size = ','.join(map(str,data.shape))
 	#np.savetxt("data.csv", data,fmt='%10.8f', delimiter=",",header=data_size)
-	f = open("data.csv", "w")
+	f = open(filename_csv, "w")
 	f.write(','.join(map(str,data.shape))+"\n")
 	for row in data:
 		f.write(','.join(map(str,row))+"\n")
@@ -44,7 +45,7 @@ def createDataFile_csv(data):
 def createDataFile_binary(data):
 	import struct
 	sizeList = list(data.shape)
-	out_file = open("data.bin","wb")
+	out_file = open(filename_bin,"wb")
 	s = struct.pack('i'*len(sizeList),*sizeList)
 	out_file.write(s)
 	for row in data:
@@ -57,18 +58,21 @@ def readBinaryFile():
 	memberships_parallel = np.fromfile(open("memberships_parallel.bin", "r"), dtype=np.uint32)
 	memberships_serial = np.fromfile(open("memberships_serial.bin", "r"), dtype=np.uint32)
 	memberships_serial = np.array(memberships_serial)
+	print(len(memberships_serial))
+	print(len(memberships_parallel))
 	print(sum(memberships_parallel == memberships_serial)/len(memberships_serial))
 
 def createFiles(numCluster, numDims, numDatapoints ,plot=False):
 	np.random.seed(60)
-	data = np.random.uniform(0,1,size=(200,3))
-	data = generateClusters(numCluster, numDims, numDatapoints)
-	createDataFile_csv(data)
+	data = np.random.uniform(0,30,size=(numDatapoints,numDims))
+	#data = generateClusters(numCluster, numDims, numDatapoints)
 	createDataFile_binary(data)
 	if plot:
 		plotClusters(data)
 
 ##Create a function that creates many clusters and returns a vector with all the clusters
 #
-createFiles(5,3,1000000)
+filename_bin = "uniform_data_3_10000.bin"
+filename_csv = "uniform_data_3_10000.csv"
+createFiles(5,3,10000000)
 #readBinaryFile()
