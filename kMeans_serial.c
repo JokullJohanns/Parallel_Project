@@ -61,34 +61,6 @@ char* getfield(char* line, int num){
     return NULL;
 }
 
-void readFile(char* filename){
-    FILE* stream = fopen(filename, "r");
-
-    // First extract the number of datapoints and their dimension
-    char firstLine[1024];
-    fgets(firstLine, 1024, stream);
-    numDatapoints = atoi(getfield(strdup(firstLine), 1)); // num datapoints
-    numDims = atoi(getfield(strdup(firstLine), 2)); // 
-
-    // Allocate array to store matrix
-    datapoints = allocMatrix(numDatapoints, numDims, 0);
-
-    // Read the datapoints, one line at a time
-    char line[1024];
-    int row = 0;
-    while (fgets(line, 1024, stream))
-    {
-        for(int column = 0; column < numDims; column++){
-            char* tmp = strdup(line);
-            double value;
-            sscanf(getfield(tmp, column+1), "%lf", &value);
-            datapoints[row][column] = value;
-            free(tmp);
-        }
-        row++;
-    }
-}
-
 void readBinary(char* filename){
     FILE *ptr;
 

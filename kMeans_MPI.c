@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
     K = 2;
     threshold = 0.001;
 
-    mpi_read("uniform_data_16_1000.bin");
+    mpi_read("uniform_data_16_100.bin");
     initVars();
     MPI_Barrier(MPI_COMM_WORLD);
     double startTime = MPI_Wtime();
@@ -294,14 +294,6 @@ int main(int argc, char *argv[])
     }
     //printMemberships();
     mpi_write("memberships_parallel.bin");
-    /*
-    double** local_datapoints;  // The datapoints to cluster
-    unsigned char* local_membership;      // Which cluster each datapoint belongs to
-    double** local_newCentroids; // Sum of the dimensions of datapoints belonging to each cluster
-    int* local_newCentroidsSize;  // Number of datapoints belonging to each cluster
-    double** global_centroids;    // Means of each cluster
-    int* global_centroidsSize;
-    */
 
     free(local_datapoints);
     free(local_membership);
