@@ -19,8 +19,9 @@ int K = 2;
 float threshold;
 
 void printCentroids() {
-    for(int i = 0; i < K; i++) {
-        for(int j = 0; j < numDims; j++) {
+	int i,j;
+    for(i = 0; i < K; i++) {
+        for(j = 0; j < numDims; j++) {
             printf("%.8f, ", centroids[i][j]);
         }
         printf("\n");
@@ -61,6 +62,35 @@ char* getfield(char* line, int num){
     return NULL;
 }
 
+void readFile(char* filename){
+    FILE* stream = fopen(filename, "r");
+
+    // First extract the number of datapoints and their dimension
+    char firstLine[1024];
+    fgets(firstLine, 1024, stream);
+    numDatapoints = atoi(getfield(strdup(firstLine), 1)); // num datapoints
+    numDims = atoi(getfield(strdup(firstLine), 2)); // 
+
+    // Allocate array to store matrix
+    datapoints = allocMatrix(numDatapoints, numDims, 0);
+
+    // Read the datapoints, one line at a time
+    char line[1024];
+    int row = 0;
+    while (fgets(line, 1024, stream))
+    {
+		int column;
+        for(column = 0; column < numDims; column++){
+            char* tmp = strdup(line);
+            double value;
+            sscanf(getfield(tmp, column+1), "%lf", &value);
+            datapoints[row][column] = value;
+            free(tmp);
+        }
+        row++;
+    }
+}
+
 void readBinary(char* filename){
     FILE *ptr;
 
@@ -69,6 +99,7 @@ void readBinary(char* filename){
     fread(&numDatapoints, sizeof(int),1,ptr); // read 10 bytes to our buffer
     fread(&numDims, sizeof(int),1,ptr);
     datapoints = allocMatrix(numDatapoints, numDims, 0);
+	printf("Datapoints(%d), dims(%d)\n", numDatapoints, numDims);
     fread(datapoints[0], sizeof(float)*numDatapoints*numDims,1,ptr);
 }
 
@@ -78,9 +109,9 @@ void initVars() {
     centroids    = allocMatrix(K, numDims, 0);
     newCentroids = allocMatrix(K, numDims, 1);
     newCentroidsSize = (int *) calloc(numDatapoints, sizeof(int));
-
-    for(int k = 0; k < K; k++) {
-        for(int i = 0; i < numDims; i++) {
+	int k, i;
+    for(k = 0; k < K; k++) {
+        for(i = 0; i < numDims; i++) {
             centroids[k][i] = datapoints[k][i];
         }
     }
@@ -88,21 +119,24 @@ void initVars() {
 
 double calcDistance(int pointIndex, int centroidIndex) {
     double sum = 0.0;
-    for(int i = 0; i < numDims; i++) {
+	int i;
+    for(i = 0; i < numDims; i++) {
         sum = sum + pow(datapoints[pointIndex][i] - centroids[centroidIndex][i], 2);
     }
     return sqrt(sum);
 }
 
 void sumDatapointAndNewCentroid(pointIndex, centroidIndex) {
-    for(int i = 0; i < numDims; i++) {
+	int i;    
+	for(i = 0; i < numDims; i++) {
         newCentroids[centroidIndex][i] += datapoints[pointIndex][i];
     }
 }
 
 void calcNewCentroids() {
-    for(int k = 0; k < K; k++) {
-        for(int d = 0; d < numDims; d++) {
+	int k,d;
+    for(k = 0; k < K; k++) {
+        for(d = 0; d < numDims; d++) {
             centroids[k][d] = newCentroids[k][d] / newCentroidsSize[k];
             //printf("newCentroid %d %d = %lf / %d = %lf\n", k, d, newCentroids[k][d], newCentroidsSize[k], centroids[k][d]);
             newCentroids[k][d] = 0.0;
@@ -124,9 +158,11 @@ void kMeans() {
     int itercount = 0;
     do {
         numChanged = 0.0;
-        for(int pointIndex = 0; pointIndex < numDatapoints; pointIndex++) { // iterate through datapoints
+		int pointIndex;
+        for(pointIndex = 0; pointIndex < numDatapoints; pointIndex++) { // iterate through datapoints
             minDistance = LONG_MAX;
-            for(int k = 0; k < K; k++) { // iterate throught cluster centroids
+			int k;
+            for(k = 0; k < K; k++) { // iterate throught cluster centroids
                 distance = calcDistance(pointIndex, k);
 
                 if(distance < minDistance) {
@@ -152,8 +188,9 @@ void kMeans() {
 
 
 void printDatapoints() {
-    for(int i = 0; i < numDatapoints; i++) {
-        for(int j = 0; j < numDims; j++) {
+	int i,j;
+    for(i = 0; i < numDatapoints; i++) {
+        for(j = 0; j < numDims; j++) {
             printf("%.8f, ", datapoints[i][j]);
         }
         printf("\n");
@@ -189,7 +226,12 @@ double get_wall_time(){
 
 int main(int argc, char **argv)
 {
-    readBinary("uniform_data_16_1000.bin");
+	if(argc < 2){
+		printf("No input file given");
+		exit(0);
+	}
+	K = 5;
+    readBinary(argv[1]);
     //readFile("uniform_data_16_1000.csv");
     
     initVars();

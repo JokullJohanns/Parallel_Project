@@ -66,7 +66,7 @@ void mpi_read(char* filename)
     MPI_File_read(fh, &numDims, 1, MPI_INT, &status);
 
     if (global_datapoint_count <= 0 || numDims <= 0) {
-        printf("Error: file format (%s)\n",filename);
+        printf("Error: file formatls - (%s)\n",filename);
         MPI_Finalize();
         exit(1);
     }
@@ -270,14 +270,18 @@ void initVars() {
 
 int main(int argc, char *argv[])
 {
+	if(argc < 2){
+		printf("No input file given");
+		exit(0);
+	}
     int rc;
     rc = MPI_Init(&argc, &argv);
     rc = MPI_Comm_size(MPI_COMM_WORLD, &processCount);
     rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    K = 2;
+    K = 5;
     threshold = 0.001;
 
-    mpi_read("uniform_data_16_100.bin");
+    mpi_read(argv[1]);
     initVars();
     MPI_Barrier(MPI_COMM_WORLD);
     double startTime = MPI_Wtime();

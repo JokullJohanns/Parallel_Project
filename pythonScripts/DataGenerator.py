@@ -13,8 +13,8 @@ def plotClusters(data):
 
 
 def generateRandomCluster(dimensions, shift, sample_size):
-	#variance = np.random.random_sample(dimensions)
-	variance = shift * np.random.random_sample(3)
+	variance = np.random.random_sample(dimensions) + shift
+	#variance = shift * np.random.random_sample(3)
 	covarianceMatrix = np.eye(dimensions)*variance
 	mean = np.random.rand(dimensions)
 	cluster = np.random.multivariate_normal(mean, covarianceMatrix, sample_size) + np.random.randint(low=0,high=shift, size=dimensions)
@@ -64,15 +64,20 @@ def readBinaryFile():
 
 def createFiles(numCluster, numDims, numDatapoints ,plot=False):
 	np.random.seed(60)
-	data = np.random.uniform(0,30,size=(numDatapoints,numDims))
-	#data = generateClusters(numCluster, numDims, numDatapoints)
+	#data = np.random.uniform(0,30,size=(numDatapoints,numDims))
+	data = generateClusters(numCluster, numDims, numDatapoints)
 	createDataFile_binary(data)
 	if plot:
 		plotClusters(data)
 
 ##Create a function that creates many clusters and returns a vector with all the clusters
 #
-filename_bin = "uniform_data_3_10000.bin"
-filename_csv = "uniform_data_3_10000.csv"
-createFiles(5,3,10000000)
+nr_dims = 64
+nr_clusters = 5
+nr_datapoints = 1000000
+
+
+filename_bin = "data/data_%s_%s.bin" % (nr_dims, nr_datapoints) 
+filename_csv = "data/data_%s_%s.csv" % (nr_dims, nr_datapoints) 
+createFiles(nr_clusters, nr_dims, nr_datapoints)
 #readBinaryFile()
